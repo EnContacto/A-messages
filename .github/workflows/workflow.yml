@@ -59,18 +59,6 @@ jobs:
         run: |
           ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_PUBLIC_IP }} "echo 'SSH Connection Successful'"
 
-      - name: Install Docker on EC2
-        run: |
-          ssh -i ~/.ssh/id_rsa ec2-user@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
-            echo "Installing Docker..."
-            sudo yum update -y
-            sudo yum install -y docker
-            sudo systemctl start docker
-            sudo systemctl enable docker
-            sudo usermod -aG docker ec2-user
-            echo "✅ Docker installed successfully."
-          EOF
-
       - name: Install Docker Compose on EC2
         run: |
           ssh -i ~/.ssh/id_rsa ec2-user@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
@@ -78,18 +66,11 @@ jobs:
             DOCKER_COMPOSE_VERSION="v2.23.0"
             sudo curl -L "https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-linux-x86_64" -o /usr/local/bin/docker-compose
             sudo chmod +x /usr/local/bin/docker-compose
-            sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose || true
+            sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
             echo "✅ Docker Compose installed successfully."
-          EOF
-
-      - name: Verify Docker and Docker Compose Installation
-        run: |
-          ssh -i ~/.ssh/id_rsa ec2-user@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
-            echo "Verifying Docker installation..."
-            docker --version || { echo "❌ Docker installation failed!"; exit 1; }
 
             echo "Verifying Docker Compose installation..."
-            docker compose version || docker-compose version || { echo "❌ Docker Compose installation failed!"; exit 1; }
+            docker-compose --version || { echo "❌ Docker Compose installation failed!"; exit 1; }
           EOF
 
       - name: Deploy to EC2
@@ -111,7 +92,7 @@ jobs:
             cd /home/ec2-user/app || { echo "❌ Failed to enter /home/ec2-user/app"; exit 1; }
 
             echo "Stopping existing containers..."
-            docker compose down || docker-compose down || { echo "Failed to stop containers"; exit 1; }
+            docker-compose down || { echo "Failed to stop containers"; exit 1; }
 
             echo "Pulling latest images..."
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/app:createpost-latest || { echo "Failed to pull createpost image"; exit 1; }
@@ -127,5 +108,5 @@ jobs:
             export S3_BUCKET="${S3_BUCKET}"
 
             echo "Restarting services..."
-            docker compose up -d || docker-compose up -d || { echo "Failed to start services"; exit 1; }
+            docker-compose up -d || { echo "Failed to start services"; exit 1; }
           EOF
