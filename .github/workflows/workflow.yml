@@ -59,19 +59,9 @@ jobs:
         run: |
           ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_PUBLIC_IP }} "echo 'SSH Connection Successful'"
 
-      - name: Install Docker Compose on EC2
+      - name: Copy docker-compose.yml to EC2
         run: |
-          ssh -i ~/.ssh/id_rsa ec2-user@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
-            echo "Installing Docker Compose..."
-            DOCKER_COMPOSE_VERSION="v2.23.0"
-            sudo curl -L "https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-linux-x86_64" -o /usr/local/bin/docker-compose
-            sudo chmod +x /usr/local/bin/docker-compose
-            sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
-            echo "✅ Docker Compose installed successfully."
-
-            echo "Verifying Docker Compose installation..."
-            docker-compose --version || { echo "❌ Docker Compose installation failed!"; exit 1; }
-          EOF
+          scp -i ~/.ssh/id_rsa docker-compose.yml ec2-user@${{ secrets.EC2_PUBLIC_IP }}:/home/ec2-user/app/docker-compose.yml
 
       - name: Deploy to EC2
         env:
