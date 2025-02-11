@@ -25,7 +25,7 @@ jobs:
 
       - name: Build and Push Docker Images
         run: |
-          for service in "createpost" "getpost" "updatepost" "deletepost"; do
+          for service in "createPost" "getPost" "updatePost" "deletePost"; do
             docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/test-message:$service-latest ./$service
             docker push ${{ secrets.DOCKERHUB_USERNAME }}/test-message:$service-latest
           done
