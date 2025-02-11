@@ -23,11 +23,22 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-      - name: Build and Push Docker Images
+      - name: Ensure Directory Exists and Build Docker Images
         run: |
-          services=("createpost" "getpost" "updatepost" "deletepost")
-          for service in "${services[@]}"; do
-            docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/app:$service-latest ./$service
+          if [ ! -d "./createPost" ]; then
+            echo "⚠️ Directory createPost not found! Creating it..."
+            mkdir -p createPost
+          fi
+          cd createPost || { echo "❌ Failed to enter directory createPost"; exit 1; }
+
+          if [ ! -f "./Dockerfile" ]; then
+            echo "❌ Dockerfile not found in createPost directory!"
+            exit 1
+          fi
+
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/app:latest .
+          for service in "createpost" "getpost" "updatepost" "deletepost"; do
+            docker tag ${{ secrets.DOCKERHUB_USERNAME }}/app:latest ${{ secrets.DOCKERHUB_USERNAME }}/app:$service-latest
             docker push ${{ secrets.DOCKERHUB_USERNAME }}/app:$service-latest
           done
 
@@ -46,13 +57,7 @@ jobs:
 
       - name: Verify SSH Connection
         run: |
-          ssh -i ~/.ssh/id_rsa ec2-user@${{ secrets.EC2_PUBLIC_IP }} "echo 'SSH Connection Successful'"
-
-      - name: Ensure project directory exists on EC2
-        run: |
-          ssh -i ~/.ssh/id_rsa ec2-user@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
-            mkdir -p ~/app
-          EOF
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_PUBLIC_IP }} "echo 'SSH Connection Successful'"
 
       - name: Install Docker Compose on EC2 (if not installed)
         run: |
