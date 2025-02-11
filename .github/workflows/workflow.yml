@@ -23,23 +23,11 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-      - name: Ensure Directory Exists and Build Docker Images
+      - name: Build and Push Docker Images
         run: |
-          if [ ! -d "./createPost" ]; then
-            echo "⚠️ Directory createPost not found! Creating it..."
-            mkdir -p createPost
-          fi
-          cd createPost || { echo "❌ Failed to enter directory createPost"; exit 1; }
-
-          if [ ! -f "./Dockerfile" ]; then
-            echo "❌ Dockerfile not found in createPost directory!"
-            exit 1
-          fi
-
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/app:latest .
           for service in "createpost" "getpost" "updatepost" "deletepost"; do
-            docker tag ${{ secrets.DOCKERHUB_USERNAME }}/app:latest ${{ secrets.DOCKERHUB_USERNAME }}/app:$service-latest
-            docker push ${{ secrets.DOCKERHUB_USERNAME }}/app:$service-latest
+            docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/test-message:$service-latest ./$service
+            docker push ${{ secrets.DOCKERHUB_USERNAME }}/test-message:$service-latest
           done
 
   deploy_ec2:
@@ -61,42 +49,39 @@ jobs:
 
       - name: Copy docker-compose.yml to EC2
         run: |
-          scp -i ~/.ssh/id_rsa docker-compose.yml ec2-user@${{ secrets.EC2_PUBLIC_IP }}:/home/ec2-user/app/docker-compose.yml
+          scp -i ~/.ssh/id_rsa docker-compose.yml ec2-user@${{ secrets.EC2_PUBLIC_IP }}:~/test-message/docker-compose.yml
 
       - name: Deploy to EC2
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_REGION: "us-east-1"
           DYNAMODB_TABLE: ${{ secrets.DYNAMODB_TABLE }}
           S3_BUCKET: ${{ secrets.S3_BUCKET }}
         run: |
           ssh -i ~/.ssh/id_rsa ec2-user@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
-            echo "Checking if project directory exists..."
-            if [ ! -d "/home/ec2-user/app" ]; then
-              echo "📂 Creating /home/ec2-user/app directory..."
-              mkdir -p /home/ec2-user/app
-            fi
+            set -e
 
-            echo "Changing to project directory..."
-            cd /home/ec2-user/app || { echo "❌ Failed to enter /home/ec2-user/app"; exit 1; }
+            echo "Ensuring project directory exists..."
+            mkdir -p ~/test-message
+            cd ~/test-message || exit 1
 
             echo "Stopping existing containers..."
-            docker-compose down || { echo "Failed to stop containers"; exit 1; }
+            sudo docker-compose down || true
 
             echo "Pulling latest images..."
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/app:createpost-latest || { echo "Failed to pull createpost image"; exit 1; }
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/app:getpost-latest || { echo "Failed to pull getpost image"; exit 1; }
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/app:updatepost-latest || { echo "Failed to pull updatepost image"; exit 1; }
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/app:deletepost-latest || { echo "Failed to pull deletepost image"; exit 1; }
+            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/test-message:createpost-latest
+            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/test-message:getpost-latest
+            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/test-message:updatepost-latest
+            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/test-message:deletepost-latest
 
             echo "Setting environment variables..."
             export AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}"
             export AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}"
-            export AWS_REGION="${AWS_REGION}"
+            export AWS_REGION="us-east-1"
             export DYNAMODB_TABLE="${DYNAMODB_TABLE}"
             export S3_BUCKET="${S3_BUCKET}"
 
             echo "Restarting services..."
-            docker-compose up -d || { echo "Failed to start services"; exit 1; }
+            sudo docker-compose up -d
           EOF

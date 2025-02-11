@@ -2,45 +2,45 @@ version: "3.8"
 
 services:
   createpost:
-    image: ${DOCKERHUB_USERNAME}/app:createpost-latest
+    image: "${DOCKERHUB_USERNAME}/test-message:createpost-latest"
     ports:
       - "3040:3040"  
     environment:
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
-      AWS_REGION: ${AWS_REGION}
-      DYNAMODB_TABLE: ${DYNAMODB_TABLE}
-      S3_BUCKET: ${S3_BUCKET}
+      AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
+      AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
+      AWS_REGION: "${AWS_REGION}"
+      DYNAMODB_TABLE: "${DYNAMODB_TABLE}"
+      S3_BUCKET: "${S3_BUCKET}"
 
   getpost:
-    image: ${DOCKERHUB_USERNAME}/app:getpost-latest
+    image: "${DOCKERHUB_USERNAME}/test-message:getpost-latest"
     ports:
       - "3041:3040"  
     environment:
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
-      AWS_REGION: ${AWS_REGION}
-      DYNAMODB_TABLE: ${DYNAMODB_TABLE}
-      S3_BUCKET: ${S3_BUCKET}
+      AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
+      AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
+      AWS_REGION: "${AWS_REGION}"
+      DYNAMODB_TABLE: "${DYNAMODB_TABLE}"
+      S3_BUCKET: "${S3_BUCKET}"
 
   updatepost:
-    image: ${DOCKERHUB_USERNAME}/app:updatepost-latest
+    image: "${DOCKERHUB_USERNAME}/test-message:updatepost-latest"
     ports:
       - "3042:3040"  
     environment:
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
-      AWS_REGION: ${AWS_REGION}
-      DYNAMODB_TABLE: ${DYNAMODB_TABLE}
-      S3_BUCKET: ${S3_BUCKET}
+      AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
+      AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
+      AWS_REGION: "${AWS_REGION}"
+      DYNAMODB_TABLE: "${DYNAMODB_TABLE}"
+      S3_BUCKET: "${S3_BUCKET}"
 
   deletepost:
-    image: ${DOCKERHUB_USERNAME}/app:deletepost-latest
+    image: "${DOCKERHUB_USERNAME}/test-message:deletepost-latest"
     ports:
       - "3043:3040"  
     environment:
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
-      AWS_REGION: ${AWS_REGION}
-      DYNAMODB_TABLE: ${DYNAMODB_TABLE}
-      S3_BUCKET: ${S3_BUCKET}
+      AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
+      AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
+      AWS_REGION: "${AWS_REGION}"
+      DYNAMODB_TABLE: "${DYNAMODB_TABLE}"
+      S3_BUCKET: "${S3_BUCKET}"
