@@ -59,20 +59,36 @@ jobs:
         run: |
           ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_PUBLIC_IP }} "echo 'SSH Connection Successful'"
 
-      - name: Install Docker Compose on EC2 (if not installed)
+      - name: Install Docker on EC2
         run: |
           ssh -i ~/.ssh/id_rsa ec2-user@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
-            echo "Checking Docker Compose installation..."
-            if ! command -v docker compose &> /dev/null && ! command -v docker-compose &> /dev/null; then
-              echo "Installing Docker Compose..."
-              sudo curl -L "https://github.com/docker/compose/releases/download/v2.23.0/docker-compose-linux-x86_64" -o /usr/local/bin/docker-compose
-              sudo chmod +x /usr/local/bin/docker-compose
-              sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose || true
-            else
-              echo "✅ Docker Compose is already installed."
-            fi
+            echo "Installing Docker..."
+            sudo yum update -y
+            sudo yum install -y docker
+            sudo systemctl start docker
+            sudo systemctl enable docker
+            sudo usermod -aG docker ec2-user
+            echo "✅ Docker installed successfully."
+          EOF
 
-            echo "Ensuring Docker Compose works..."
+      - name: Install Docker Compose on EC2
+        run: |
+          ssh -i ~/.ssh/id_rsa ec2-user@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
+            echo "Installing Docker Compose..."
+            DOCKER_COMPOSE_VERSION="v2.23.0"
+            sudo curl -L "https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-linux-x86_64" -o /usr/local/bin/docker-compose
+            sudo chmod +x /usr/local/bin/docker-compose
+            sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose || true
+            echo "✅ Docker Compose installed successfully."
+          EOF
+
+      - name: Verify Docker and Docker Compose Installation
+        run: |
+          ssh -i ~/.ssh/id_rsa ec2-user@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
+            echo "Verifying Docker installation..."
+            docker --version || { echo "❌ Docker installation failed!"; exit 1; }
+
+            echo "Verifying Docker Compose installation..."
             docker compose version || docker-compose version || { echo "❌ Docker Compose installation failed!"; exit 1; }
           EOF
 
