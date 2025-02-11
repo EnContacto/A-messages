@@ -94,49 +94,56 @@ jobs:
             sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/app:updatepost-latest
             sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/app:deletepost-latest
 
-            echo "Setting environment variables..."
-            echo "AWS_ACCESS_KEY_ID='${AWS_ACCESS_KEY_ID}'" | sudo tee -a /etc/environment
-            echo "AWS_SECRET_ACCESS_KEY='${AWS_SECRET_ACCESS_KEY}'" | sudo tee -a /etc/environment
-            echo "AWS_REGION='${AWS_REGION}'" | sudo tee -a /etc/environment
-            echo "DYNAMODB_TABLE='${DYNAMODB_TABLE}'" | sudo tee -a /etc/environment
-            echo "S3_BUCKET='${S3_BUCKET}'" | sudo tee -a /etc/environment
+            echo "Setting environment variables in /etc/environment..."
+            echo "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}" | sudo tee -a /etc/environment
+            echo "AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}" | sudo tee -a /etc/environment
+            echo "AWS_REGION=${AWS_REGION}" | sudo tee -a /etc/environment
+            echo "DYNAMODB_TABLE=${DYNAMODB_TABLE}" | sudo tee -a /etc/environment
+            echo "S3_BUCKET=${S3_BUCKET}" | sudo tee -a /etc/environment
             source /etc/environment
+
+            echo "Exporting environment variables for the session..."
+            export AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}"
+            export AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}"
+            export AWS_REGION="${AWS_REGION}"
+            export DYNAMODB_TABLE="${DYNAMODB_TABLE}"
+            export S3_BUCKET="${S3_BUCKET}"
 
             echo "Starting services..."
             sudo docker run -d -p 3001:3000 --name createpost \
               --restart always \
-              -e AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}" \
-              -e AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}" \
-              -e AWS_REGION="${AWS_REGION}" \
-              -e DYNAMODB_TABLE="${DYNAMODB_TABLE}" \
-              -e S3_BUCKET="${S3_BUCKET}" \
+              -e AWS_ACCESS_KEY_ID="$(printenv AWS_ACCESS_KEY_ID)" \
+              -e AWS_SECRET_ACCESS_KEY="$(printenv AWS_SECRET_ACCESS_KEY)" \
+              -e AWS_REGION="$(printenv AWS_REGION)" \
+              -e DYNAMODB_TABLE="$(printenv DYNAMODB_TABLE)" \
+              -e S3_BUCKET="$(printenv S3_BUCKET)" \
               ${{ secrets.DOCKERHUB_USERNAME }}/app:createpost-latest
 
             sudo docker run -d -p 3002:3000 --name deletepost \
               --restart always \
-              -e AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}" \
-              -e AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}" \
-              -e AWS_REGION="${AWS_REGION}" \
-              -e DYNAMODB_TABLE="${DYNAMODB_TABLE}" \
-              -e S3_BUCKET="${S3_BUCKET}" \
+              -e AWS_ACCESS_KEY_ID="$(printenv AWS_ACCESS_KEY_ID)" \
+              -e AWS_SECRET_ACCESS_KEY="$(printenv AWS_SECRET_ACCESS_KEY)" \
+              -e AWS_REGION="$(printenv AWS_REGION)" \
+              -e DYNAMODB_TABLE="$(printenv DYNAMODB_TABLE)" \
+              -e S3_BUCKET="$(printenv S3_BUCKET)" \
               ${{ secrets.DOCKERHUB_USERNAME }}/app:deletepost-latest
 
             sudo docker run -d -p 3003:3000 --name getpost \
               --restart always \
-              -e AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}" \
-              -e AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}" \
-              -e AWS_REGION="${AWS_REGION}" \
-              -e DYNAMODB_TABLE="${DYNAMODB_TABLE}" \
-              -e S3_BUCKET="${S3_BUCKET}" \
+              -e AWS_ACCESS_KEY_ID="$(printenv AWS_ACCESS_KEY_ID)" \
+              -e AWS_SECRET_ACCESS_KEY="$(printenv AWS_SECRET_ACCESS_KEY)" \
+              -e AWS_REGION="$(printenv AWS_REGION)" \
+              -e DYNAMODB_TABLE="$(printenv DYNAMODB_TABLE)" \
+              -e S3_BUCKET="$(printenv S3_BUCKET)" \
               ${{ secrets.DOCKERHUB_USERNAME }}/app:getpost-latest
 
             sudo docker run -d -p 3004:3000 --name updatepost \
               --restart always \
-              -e AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}" \
-              -e AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}" \
-              -e AWS_REGION="${AWS_REGION}" \
-              -e DYNAMODB_TABLE="${DYNAMODB_TABLE}" \
-              -e S3_BUCKET="${S3_BUCKET}" \
+              -e AWS_ACCESS_KEY_ID="$(printenv AWS_ACCESS_KEY_ID)" \
+              -e AWS_SECRET_ACCESS_KEY="$(printenv AWS_SECRET_ACCESS_KEY)" \
+              -e AWS_REGION="$(printenv AWS_REGION)" \
+              -e DYNAMODB_TABLE="$(printenv DYNAMODB_TABLE)" \
+              -e S3_BUCKET="$(printenv S3_BUCKET)" \
               ${{ secrets.DOCKERHUB_USERNAME }}/app:updatepost-latest
 
             echo "Deployment complete!"
