@@ -80,8 +80,14 @@ jobs:
           S3_BUCKET: ${{ secrets.S3_BUCKET }}
         run: |
           ssh -i ~/.ssh/id_rsa ec2-user@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
+            echo "Checking if project directory exists..."
+            if [ ! -d "/home/ec2-user/app" ]; then
+              echo "📂 Creating /home/ec2-user/app directory..."
+              mkdir -p /home/ec2-user/app
+            fi
+
             echo "Changing to project directory..."
-            cd ~/app || { echo "Directory not found"; exit 1; }
+            cd /home/ec2-user/app || { echo "❌ Failed to enter /home/ec2-user/app"; exit 1; }
 
             echo "Stopping existing containers..."
             sudo docker-compose down || { echo "Failed to stop containers"; exit 1; }
