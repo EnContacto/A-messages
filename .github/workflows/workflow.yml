@@ -94,23 +94,20 @@ jobs:
             sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/app:updatepost-latest
             sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/app:deletepost-latest
 
-            echo "Verifying environment variables..."
-            if [[ -z "${DYNAMODB_TABLE}" ]]; then
-              export DYNAMODB_TABLE="PostsTable"
-              echo "DYNAMODB_TABLE not set, using default: ${DYNAMODB_TABLE}"
-            fi
-
-            if [[ -z "${S3_BUCKET}" ]]; then
-              export S3_BUCKET="distribuidabucketsocial"
-              echo "S3_BUCKET not set, using default: ${S3_BUCKET}"
-            fi
+            echo "Setting environment variables..."
+            echo "AWS_ACCESS_KEY_ID='${AWS_ACCESS_KEY_ID}'" | sudo tee -a /etc/environment
+            echo "AWS_SECRET_ACCESS_KEY='${AWS_SECRET_ACCESS_KEY}'" | sudo tee -a /etc/environment
+            echo "AWS_REGION='${AWS_REGION}'" | sudo tee -a /etc/environment
+            echo "DYNAMODB_TABLE='${DYNAMODB_TABLE}'" | sudo tee -a /etc/environment
+            echo "S3_BUCKET='${S3_BUCKET}'" | sudo tee -a /etc/environment
+            source /etc/environment
 
             echo "Starting services..."
             sudo docker run -d -p 3001:3000 --name createpost \
               --restart always \
               -e AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}" \
               -e AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}" \
-              -e AWS_REGION="us-east-1" \
+              -e AWS_REGION="${AWS_REGION}" \
               -e DYNAMODB_TABLE="${DYNAMODB_TABLE}" \
               -e S3_BUCKET="${S3_BUCKET}" \
               ${{ secrets.DOCKERHUB_USERNAME }}/app:createpost-latest
@@ -119,7 +116,7 @@ jobs:
               --restart always \
               -e AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}" \
               -e AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}" \
-              -e AWS_REGION="us-east-1" \
+              -e AWS_REGION="${AWS_REGION}" \
               -e DYNAMODB_TABLE="${DYNAMODB_TABLE}" \
               -e S3_BUCKET="${S3_BUCKET}" \
               ${{ secrets.DOCKERHUB_USERNAME }}/app:deletepost-latest
@@ -128,7 +125,7 @@ jobs:
               --restart always \
               -e AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}" \
               -e AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}" \
-              -e AWS_REGION="us-east-1" \
+              -e AWS_REGION="${AWS_REGION}" \
               -e DYNAMODB_TABLE="${DYNAMODB_TABLE}" \
               -e S3_BUCKET="${S3_BUCKET}" \
               ${{ secrets.DOCKERHUB_USERNAME }}/app:getpost-latest
@@ -137,7 +134,7 @@ jobs:
               --restart always \
               -e AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}" \
               -e AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}" \
-              -e AWS_REGION="us-east-1" \
+              -e AWS_REGION="${AWS_REGION}" \
               -e DYNAMODB_TABLE="${DYNAMODB_TABLE}" \
               -e S3_BUCKET="${S3_BUCKET}" \
               ${{ secrets.DOCKERHUB_USERNAME }}/app:updatepost-latest
