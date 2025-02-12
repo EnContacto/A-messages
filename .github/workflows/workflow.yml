@@ -25,23 +25,23 @@ jobs:
 
       - name: Build and Push CreatePost Image
         run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationQA:createpost-latest ./createPost
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationqa:createpost-latest ./createPost
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationQA:createpost-latest
 
       - name: Build and Push GetPost Image
         run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationQA:getpost-latest ./getPost
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationqa:getpost-latest ./getPost
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationQA:getpost-latest
 
       - name: Build and Push UpdatePost Image
         run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationQA:updatepost-latest ./updatePost
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationQA:updatepost-latest
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationqa:updatepost-latest ./updatePost
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationqa:updatepost-latest
 
       - name: Build and Push DeletePost Image
         run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationQA:deletepost-latest ./deletePost
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationQA:deletepost-latest
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationqa:deletepost-latest ./deletePost
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationqa:deletepost-latest
 
   deploy_ec2:
     name: Deploy on EC2
