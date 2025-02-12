@@ -1,150 +1,64 @@
-name: Deploy to EC2
+name: Deploy Chat Microservices to AWS EC2
 
 on:
   push:
-    branches:
-      - main
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+env:
+  DOCKER_REPOSITORY: ztencontacto/post-microservice
+  APP_PORT: 5054
 
 jobs:
-  build_and_push:
-    name: Build and Push Docker Images
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v2
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-      - name: Build and Push CreatePost Image
+      - name: Build and Push Docker Images
         run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/app:createpost-latest ./createPost
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/app:createpost-latest
+          for service in createPost deletePost getPost updatePost; do
+            echo "Building and pushing $service..."
+            docker build -t ${{ env.DOCKER_REPOSITORY }}-$service:latest ./$service
+            docker push ${{ env.DOCKER_REPOSITORY }}-$service:latest
+          done
 
-      - name: Build and Push GetPost Image
+      - name: Deploy to EC2 Instances
         run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/app:getpost-latest ./getPost
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/app:getpost-latest
-
-      - name: Build and Push UpdatePost Image
-        run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/app:updatepost-latest ./updatePost
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/app:updatepost-latest
-
-      - name: Build and Push DeletePost Image
-        run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/app:deletepost-latest ./deletePost
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/app:deletepost-latest
-
-  deploy_ec2:
-    name: Deploy on EC2
-    runs-on: ubuntu-latest
-    needs: build_and_push
-
-    steps:
-      - name: Set up SSH Key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.EC2_PUBLIC_IP }} >> ~/.ssh/known_hosts
-          eval "$(ssh-agent -s)"
-          ssh-add ~/.ssh/id_rsa
-
-      - name: Verify SSH Connection
-        run: ssh -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_PUBLIC_IP }} "echo 'SSH Connection Successful'"
-
-      - name: Deploy to EC2
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: "us-east-1"
-          DYNAMODB_TABLE: "${{ secrets.DYNAMODB_TABLE }}"
-          S3_BUCKET: "${{ secrets.S3_BUCKET }}"
-        run: |
-          ssh -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
-            set -e
-
-            echo "Checking and installing Docker if necessary..."
-            if ! command -v docker &> /dev/null; then
-              sudo yum update -y
-              sudo yum install docker -y
-              sudo systemctl start docker
-              sudo systemctl enable docker
-            fi
-
-            echo "Stopping and removing existing containers..."
-            for service in createpost deletepost getpost updatepost; do
-              if sudo docker ps -a --format '{{.Names}}' | grep -q "^$service\$"; then
-                sudo docker stop $service
-                sudo docker rm $service
+          echo "Starting deployment to EC2 instances..."
+          IFS=',' read -ra HOSTS <<< "${{ secrets.EC2_HOSTS }}"
+          for HOST in "${HOSTS[@]}"; do
+            echo "Deploying to $HOST"
+            ssh -o StrictHostKeyChecking=no -i <(echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}") ec2-user@$HOST "
+              if ! command -v docker &> /dev/null; then
+                echo 'Installing Docker...'
+                sudo yum update -y
+                sudo yum install -y docker
+                sudo systemctl start docker
+                sudo systemctl enable docker
               fi
-            done
 
-            echo "Pulling latest Docker images..."
-            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/app:createpost-latest
-            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/app:getpost-latest
-            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/app:updatepost-latest
-            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/app:deletepost-latest
+              echo 'Installing Docker Compose...'
+              sudo curl -L 'https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)' -o /usr/local/bin/docker-compose
+              sudo chmod +x /usr/local/bin/docker-compose
 
-            echo "Setting environment variables in /etc/environment..."
-            echo "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}" | sudo tee -a /etc/environment
-            echo "AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}" | sudo tee -a /etc/environment
-            echo "AWS_REGION=${AWS_REGION}" | sudo tee -a /etc/environment
-            echo "DYNAMODB_TABLE=${DYNAMODB_TABLE}" | sudo tee -a /etc/environment
-            echo "S3_BUCKET=${S3_BUCKET}" | sudo tee -a /etc/environment
-            source /etc/environment
+              echo 'Pulling latest Docker images...'
+              for service in createPost deletePost getPost updatePost; do
+                sudo docker pull ${{ env.DOCKER_REPOSITORY }}-$service:latest
+              done
 
-            echo "Exporting environment variables for the session..."
-            export AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}"
-            export AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}"
-            export AWS_REGION="${AWS_REGION}"
-            export DYNAMODB_TABLE="${DYNAMODB_TABLE}"
-            export S3_BUCKET="${S3_BUCKET}"
-
-            echo "Starting services..."
-            sudo docker run -d -p 3001:3000 --name createpost \
-              --restart always \
-              -e AWS_ACCESS_KEY_ID="$(printenv AWS_ACCESS_KEY_ID)" \
-              -e AWS_SECRET_ACCESS_KEY="$(printenv AWS_SECRET_ACCESS_KEY)" \
-              -e AWS_REGION="$(printenv AWS_REGION)" \
-              -e DYNAMODB_TABLE="$(printenv DYNAMODB_TABLE)" \
-              -e S3_BUCKET="$(printenv S3_BUCKET)" \
-              ${{ secrets.DOCKERHUB_USERNAME }}/app:createpost-latest
-
-            sudo docker run -d -p 3002:3000 --name deletepost \
-              --restart always \
-              -e AWS_ACCESS_KEY_ID="$(printenv AWS_ACCESS_KEY_ID)" \
-              -e AWS_SECRET_ACCESS_KEY="$(printenv AWS_SECRET_ACCESS_KEY)" \
-              -e AWS_REGION="$(printenv AWS_REGION)" \
-              -e DYNAMODB_TABLE="$(printenv DYNAMODB_TABLE)" \
-              -e S3_BUCKET="$(printenv S3_BUCKET)" \
-              ${{ secrets.DOCKERHUB_USERNAME }}/app:deletepost-latest
-
-            sudo docker run -d -p 3003:3000 --name getpost \
-              --restart always \
-              -e AWS_ACCESS_KEY_ID="$(printenv AWS_ACCESS_KEY_ID)" \
-              -e AWS_SECRET_ACCESS_KEY="$(printenv AWS_SECRET_ACCESS_KEY)" \
-              -e AWS_REGION="$(printenv AWS_REGION)" \
-              -e DYNAMODB_TABLE="$(printenv DYNAMODB_TABLE)" \
-              -e S3_BUCKET="$(printenv S3_BUCKET)" \
-              ${{ secrets.DOCKERHUB_USERNAME }}/app:getpost-latest
-
-            sudo docker run -d -p 3004:3000 --name updatepost \
-              --restart always \
-              -e AWS_ACCESS_KEY_ID="$(printenv AWS_ACCESS_KEY_ID)" \
-              -e AWS_SECRET_ACCESS_KEY="$(printenv AWS_SECRET_ACCESS_KEY)" \
-              -e AWS_REGION="$(printenv AWS_REGION)" \
-              -e DYNAMODB_TABLE="$(printenv DYNAMODB_TABLE)" \
-              -e S3_BUCKET="$(printenv S3_BUCKET)" \
-              ${{ secrets.DOCKERHUB_USERNAME }}/app:updatepost-latest
-
-            echo "Deployment complete!"
-          EOF
+              echo 'Restarting containers...'
+              sudo docker-compose down || true
+              sudo docker-compose up -d
+            "
+            echo "Deployment to $HOST completed."
+          done
