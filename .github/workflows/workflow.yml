@@ -25,23 +25,8 @@ jobs:
 
       - name: Build and Push CreatePost Image
         run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationqa:createpost-latest ./createPost
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationqa:createpost-latest
-
-      - name: Build and Push GetPost Image
-        run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationqa:getpost-latest ./getPost
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationqa:getpost-latest
-
-      - name: Build and Push UpdatePost Image
-        run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationqa:updatepost-latest ./updatePost
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationqa:updatepost-latest
-
-      - name: Build and Push DeletePost Image
-        run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationqa:deletepost-latest ./deletePost
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationqa:deletepost-latest
+          docker build --no-cache -t ${{ secrets.DOCKERHUB_USERNAME }}/app:createpost-latest ./createPost
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/app:createpost-latest
 
   deploy_ec2:
     name: Deploy on EC2
@@ -56,95 +41,32 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.EC2_PUBLIC_IP }} >> ~/.ssh/known_hosts
 
-      - name: Debug SSH Key
-        run: |
-          echo "Checking SSH key format..."
-          awk '{print NR " " $0}' ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_PUBLIC_IP }} "echo 'SSH Connection Test'"
-
       - name: Deploy Docker Containers on EC2
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: "us-east-1"
           DYNAMODB_TABLE: "PostsTable"
-          S3_BUCKET: ${{ secrets.S3_BUCKET }}
-          REDIS_HOST: ${{ secrets.REDIS_HOST }}
-          REDIS_PORT: "6379"
+          S3_BUCKET: "distribuidabucketsocial"
         run: |
           ssh -i ~/.ssh/id_rsa ec2-user@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
-            echo "🔍 Verificando si Docker está instalado..."
-            if ! command -v docker &> /dev/null; then
-              echo "⚙️ Instalando Docker..."
-              sudo yum update -y
-              sudo yum install -y docker
-              sudo systemctl start docker
-              sudo systemctl enable docker
-              sudo usermod -aG docker ec2-user
-              echo "✅ Docker instalado correctamente."
-            else
-              echo "✅ Docker ya está instalado."
+            echo "Stopping and removing existing containers if running..."
+            RUNNING_CONTAINERS=$(sudo docker ps -q)
+            if [ ! -z "$RUNNING_CONTAINERS" ]; then
+              sudo docker stop $RUNNING_CONTAINERS
+              sudo docker rm $RUNNING_CONTAINERS
             fi
-  
-            echo "🔍 Verificando si Docker Compose está instalado..."
-            if ! command -v docker-compose &> /dev/null; then
-              echo "⚙️ Instalando Docker Compose..."
-              sudo curl -L "https://github.com/docker/compose/releases/download/v2.23.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-              sudo chmod +x /usr/local/bin/docker-compose
-              echo "✅ Docker Compose instalado correctamente."
-            else
-              echo "✅ Docker Compose ya está instalado."
-            fi
-  
-            echo "Stopping and removing existing containers..."
-            sudo docker stop createpost deletepost getpost updatepost || echo "No running containers to stop."
-            sudo docker rm createpost deletepost getpost updatepost || echo "No existing containers to remove."
-  
+
             echo "Pulling latest Docker images..."
-            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationqa:createpost-latest
-            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationqa:getpost-latest
-            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationqa:updatepost-latest
-            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationqa:deletepost-latest
-  
-            echo "Running containers with the latest images and environment variables..."
+            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/app:createpost-latest
+
+            echo "Running containers with the latest images..."
             sudo docker run -d -p 3001:3000 --name createpost \
-               -e AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}" \
-              -e AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}" \
-              -e AWS_REGION="${AWS_REGION}" \
-              -e DYNAMODB_TABLE="${DYNAMODB_TABLE}" \
-              -e S3_BUCKET="${S3_BUCKET}" \
-              -e REDIS_HOST="${REDIS_HOST}" \
-              -e REDIS_PORT="${REDIS_PORT}" \
-              ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationqa:createpost-latest
-  
-            sudo docker run -d -p 3002:3000 --name deletepost \
+              --restart always \
               -e AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}" \
               -e AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}" \
-              -e AWS_REGION="${AWS_REGION}" \
+              -e AWS_REGION="us-east-1" \
               -e DYNAMODB_TABLE="${DYNAMODB_TABLE}" \
               -e S3_BUCKET="${S3_BUCKET}" \
-              -e REDIS_HOST="${REDIS_HOST}" \
-              -e REDIS_PORT="${REDIS_PORT}" \
-              ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationqa:deletepost-latest
-  
-            sudo docker run -d -p 3003:3000 --name getpost \
-              -e AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}" \
-              -e AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}" \
-              -e AWS_REGION="${AWS_REGION}" \
-              -e DYNAMODB_TABLE="${DYNAMODB_TABLE}" \
-              -e S3_BUCKET="${S3_BUCKET}" \
-              -e REDIS_HOST="${REDIS_HOST}" \
-              -e REDIS_PORT="${REDIS_PORT}" \
-              ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationqa:getpost-latest
-  
-            sudo docker run -d -p 3004:3000 --name updatepost \
-              -e AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}" \
-              -e AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}" \
-              -e AWS_REGION="${AWS_REGION}" \
-              -e DYNAMODB_TABLE="${DYNAMODB_TABLE}" \
-              -e S3_BUCKET="${S3_BUCKET}" \
-              -e REDIS_HOST="${REDIS_HOST}" \
-              -e REDIS_PORT="${REDIS_PORT}" \
-              ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationqa:updatepost-latest
+              ${{ secrets.DOCKERHUB_USERNAME }}/app:createpost-latest
           EOF
