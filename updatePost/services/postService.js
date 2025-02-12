@@ -1,24 +1,25 @@
-const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
-const { DynamoDBDocumentClient, GetCommand, UpdateCommand } = require("@aws-sdk/lib-dynamodb");
-const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
-
-const dynamoDB = DynamoDBDocumentClient.from(new DynamoDBClient({ region: "us-east-1" }));
-const s3 = new S3Client({ region: "us-east-1" });
+const { GetCommand, UpdateCommand } = require("@aws-sdk/lib-dynamodb");
+const { PutObjectCommand } = require("@aws-sdk/client-s3");
+const { dynamoDB, s3 } = require("../config/awsConfig");
 
 module.exports.updatePost = async (postId, newContent, newImage) => {
   const tableName = process.env.DYNAMODB_TABLE || "PostsTable";
   const bucketName = process.env.S3_BUCKET || "distribuidabucketsocial";
 
   try {
-      if (!postId) {
+    // 🔍 Validar que `postId` es una cadena (String)
+    if (!postId) {
       throw new Error("Post ID is required");
     }
-    const stringPostId = String(postId); 
+    const stringPostId = String(postId);
 
-       const existingPost = await dynamoDB.send(
+    // 🔎 Verificar si el post existe en la base de datos
+    console.log(`Checking if postId ${stringPostId} exists in table ${tableName}`);
+
+    const existingPost = await dynamoDB.send(
       new GetCommand({
         TableName: tableName,
-        Key: { id: stringPostId }, 
+        Key: { id: stringPostId },
       })
     );
 
@@ -28,7 +29,9 @@ module.exports.updatePost = async (postId, newContent, newImage) => {
 
     let updatedImageUrl = existingPost.Item.imageUrl;
 
+    // 📷 Subir nueva imagen a S3 si se proporciona
     if (newImage) {
+      console.log("Uploading new image to S3...");
       const fileBuffer = newImage.buffer;
       const fileName = `${stringPostId}-${Date.now()}.jpg`;
       const mimeType = newImage.mimetype;
@@ -40,16 +43,17 @@ module.exports.updatePost = async (postId, newContent, newImage) => {
         ContentType: mimeType,
       };
 
-      const uploadResult = await s3.send(new PutObjectCommand(uploadParams));
+      await s3.send(new PutObjectCommand(uploadParams));
       updatedImageUrl = `https://${bucketName}.s3.amazonaws.com/${fileName}`;
     }
 
-    // 📝 Actualizar el post en DynamoDB
+    // 📝 **Actualizar el post en DynamoDB**
+    console.log("Updating post in DynamoDB...");
     await dynamoDB.send(
       new UpdateCommand({
         TableName: tableName,
-        Key: { id: stringPostId }, // 🔥 Convertir `id` a string explícitamente
-        UpdateExpression: "set content = :content, imageUrl = :imageUrl, updatedAt = :updatedAt",
+        Key: { id: stringPostId },
+        UpdateExpression: "SET content = :content, imageUrl = :imageUrl, updatedAt = :updatedAt",
         ExpressionAttributeValues: {
           ":content": newContent || existingPost.Item.content,
           ":imageUrl": updatedImageUrl,
@@ -59,9 +63,10 @@ module.exports.updatePost = async (postId, newContent, newImage) => {
       })
     );
 
+    console.log("Post updated successfully!");
     return { success: true, message: "Post updated successfully", updatedImageUrl };
   } catch (error) {
-    console.error("Error updating post:", error);
+    console.error("❌ Error updating post:", error);
     throw new Error("Internal server error");
   }
 };
