@@ -79,10 +79,10 @@ jobs:
             sudo docker rm createpost deletepost getpost updatepost || echo "No existing containers to remove."
 
             echo "Pulling latest Docker images..."
-            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationQA:createpost-latest
-            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationQA:getpost-latest
-            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationQA:updatepost-latest
-            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationQA:deletepost-latest
+            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationqa:createpost-latest
+            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationqa:getpost-latest
+            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationqa:updatepost-latest
+            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationqa:deletepost-latest
 
             echo "Running containers with the latest images and environment variables..."
             sudo docker run -d -p 3001:3000 --name createpost \
