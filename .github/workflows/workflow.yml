@@ -26,7 +26,7 @@ jobs:
 
       - name: Build and Push Docker Images
         run: |
-          for service in createPost deletePost getPost updatePost; do
+          for service in createpost deletepost getpost updatepost; do
             echo "Building and pushing $service..."
             docker build -t ${{ env.DOCKER_REPOSITORY }}-$service:latest ./$service
             docker push ${{ env.DOCKER_REPOSITORY }}-$service:latest
