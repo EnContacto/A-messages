@@ -7,19 +7,18 @@ module.exports.updatePost = async (postId, newContent, newImage) => {
   const bucketName = process.env.S3_BUCKET || "distribuidabucketsocial";
 
   try {
-    // 🔍 Validar que `postId` es una cadena (String)
     if (!postId) {
       throw new Error("Post ID is required");
     }
     const stringPostId = String(postId);
 
-    // 🔎 Verificar si el post existe en la base de datos
     console.log(`Checking if postId ${stringPostId} exists in table ${tableName}`);
 
+    // 🔥 PRIMERO OBTENER EL POST COMPLETO
     const existingPost = await dynamoDB.send(
       new GetCommand({
         TableName: tableName,
-        Key: { id: stringPostId, timestamp: existingPost.Item.timestamp }, // ✅ ENVIAR CLAVE COMPUESTA
+        Key: { id: stringPostId },
       })
     );
 
@@ -27,9 +26,10 @@ module.exports.updatePost = async (postId, newContent, newImage) => {
       throw new Error("Post not found");
     }
 
+    // ✅ AHORA SE PUEDE ACCEDER A timestamp
+    const postTimestamp = existingPost.Item.timestamp;
     let updatedImageUrl = existingPost.Item.imageUrl;
 
-    // 📷 Subir nueva imagen a S3 si se proporciona
     if (newImage) {
       console.log("Uploading new image to S3...");
       const fileBuffer = newImage.buffer;
@@ -47,12 +47,11 @@ module.exports.updatePost = async (postId, newContent, newImage) => {
       updatedImageUrl = `https://${bucketName}.s3.amazonaws.com/${fileName}`;
     }
 
-    // 📝 **Actualizar el post en DynamoDB**
     console.log("Updating post in DynamoDB...");
     await dynamoDB.send(
       new UpdateCommand({
         TableName: tableName,
-        Key: { id: stringPostId, timestamp: existingPost.Item.timestamp }, // ✅ ENVIAR CLAVE COMPUESTA
+        Key: { id: stringPostId, timestamp: postTimestamp }, // ✅ Ahora timestamp está definido
         UpdateExpression: "SET content = :content, imageUrl = :imageUrl, updatedAt = :updatedAt",
         ExpressionAttributeValues: {
           ":content": newContent || existingPost.Item.content,
