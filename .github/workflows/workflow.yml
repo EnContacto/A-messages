@@ -26,12 +26,12 @@ jobs:
       - name: Build and Push CreatePost Image
         run: |
           docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationqa:createpost-latest ./createPost
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationQA:createpost-latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationqa:createpost-latest
 
       - name: Build and Push GetPost Image
         run: |
           docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationqa:getpost-latest ./getPost
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationQA:getpost-latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationqa:getpost-latest
 
       - name: Build and Push UpdatePost Image
         run: |
@@ -93,7 +93,7 @@ jobs:
               -e S3_BUCKET="${S3_BUCKET}" \
               -e REDIS_HOST="${REDIS_HOST}" \
               -e REDIS_PORT="${REDIS_PORT}" \
-              ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationQA:createpost-latest
+              ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationqa:createpost-latest
 
             sudo docker run -d -p 3002:3000 --name deletepost \
               -e AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}" \
@@ -103,7 +103,7 @@ jobs:
               -e S3_BUCKET="${S3_BUCKET}" \
               -e REDIS_HOST="${REDIS_HOST}" \
               -e REDIS_PORT="${REDIS_PORT}" \
-              ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationQA:deletepost-latest
+              ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationqa:deletepost-latest
 
             sudo docker run -d -p 3003:3000 --name getpost \
               -e AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}" \
@@ -113,7 +113,7 @@ jobs:
               -e S3_BUCKET="${S3_BUCKET}" \
               -e REDIS_HOST="${REDIS_HOST}" \
               -e REDIS_PORT="${REDIS_PORT}" \
-              ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationQA:getpost-latest
+              ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationqa:getpost-latest
 
             sudo docker run -d -p 3004:3000 --name updatepost \
               -e AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}" \
@@ -123,5 +123,5 @@ jobs:
               -e S3_BUCKET="${S3_BUCKET}" \
               -e REDIS_HOST="${REDIS_HOST}" \
               -e REDIS_PORT="${REDIS_PORT}" \
-              ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationQA:updatepost-latest
+              ${{ secrets.DOCKERHUB_USERNAME }}/test-communicationqa:updatepost-latest
           EOF
