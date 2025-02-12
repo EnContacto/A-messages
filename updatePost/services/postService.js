@@ -19,7 +19,7 @@ module.exports.updatePost = async (postId, newContent, newImage) => {
     const existingPost = await dynamoDB.send(
       new GetCommand({
         TableName: tableName,
-        Key: { id: stringPostId },
+        Key: { id: stringPostId, timestamp: existingPost.Item.timestamp }, // ✅ ENVIAR CLAVE COMPUESTA
       })
     );
 
@@ -52,7 +52,7 @@ module.exports.updatePost = async (postId, newContent, newImage) => {
     await dynamoDB.send(
       new UpdateCommand({
         TableName: tableName,
-        Key: { id: stringPostId },
+        Key: { id: stringPostId, timestamp: existingPost.Item.timestamp }, // ✅ ENVIAR CLAVE COMPUESTA
         UpdateExpression: "SET content = :content, imageUrl = :imageUrl, updatedAt = :updatedAt",
         ExpressionAttributeValues: {
           ":content": newContent || existingPost.Item.content,
