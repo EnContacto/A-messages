@@ -10,11 +10,15 @@ module.exports.updatePost = async (postId, newContent, newImage) => {
   const bucketName = process.env.S3_BUCKET || "distribuidabucketsocial";
 
   try {
-    // Obtener el post actual
-    const existingPost = await dynamoDB.send(
+      if (!postId) {
+      throw new Error("Post ID is required");
+    }
+    const stringPostId = String(postId); 
+
+       const existingPost = await dynamoDB.send(
       new GetCommand({
         TableName: tableName,
-        Key: { id: postId },
+        Key: { id: stringPostId }, 
       })
     );
 
@@ -24,10 +28,9 @@ module.exports.updatePost = async (postId, newContent, newImage) => {
 
     let updatedImageUrl = existingPost.Item.imageUrl;
 
-    // Subir nueva imagen a S3 si se proporciona
     if (newImage) {
       const fileBuffer = newImage.buffer;
-      const fileName = `${postId}-${Date.now()}.jpg`;
+      const fileName = `${stringPostId}-${Date.now()}.jpg`;
       const mimeType = newImage.mimetype;
 
       const uploadParams = {
@@ -41,11 +44,11 @@ module.exports.updatePost = async (postId, newContent, newImage) => {
       updatedImageUrl = `https://${bucketName}.s3.amazonaws.com/${fileName}`;
     }
 
-    // Actualizar el post en DynamoDB
+    // 📝 Actualizar el post en DynamoDB
     await dynamoDB.send(
       new UpdateCommand({
         TableName: tableName,
-        Key: { id: postId },
+        Key: { id: stringPostId }, // 🔥 Convertir `id` a string explícitamente
         UpdateExpression: "set content = :content, imageUrl = :imageUrl, updatedAt = :updatedAt",
         ExpressionAttributeValues: {
           ":content": newContent || existingPost.Item.content,
