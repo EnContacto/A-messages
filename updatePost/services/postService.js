@@ -14,7 +14,7 @@ module.exports.updatePost = async (postId, newContent, newImage) => {
 
     console.log(`Checking if postId ${stringPostId} exists in table ${tableName}`);
 
-    // 🔥 PRIMERO OBTENER EL POST COMPLETO
+    // 🔥 Obtener el post para recuperar el `timestamp`
     const existingPost = await dynamoDB.send(
       new GetCommand({
         TableName: tableName,
@@ -26,8 +26,7 @@ module.exports.updatePost = async (postId, newContent, newImage) => {
       throw new Error("Post not found");
     }
 
-    // ✅ AHORA SE PUEDE ACCEDER A timestamp
-    const postTimestamp = existingPost.Item.timestamp;
+    const postTimestamp = existingPost.Item.timestamp; // ✅ Obtener el timestamp
     let updatedImageUrl = existingPost.Item.imageUrl;
 
     if (newImage) {
@@ -51,7 +50,7 @@ module.exports.updatePost = async (postId, newContent, newImage) => {
     await dynamoDB.send(
       new UpdateCommand({
         TableName: tableName,
-        Key: { id: stringPostId, timestamp: postTimestamp }, // ✅ Ahora timestamp está definido
+        Key: { id: stringPostId, timestamp: postTimestamp }, // ✅ Agregar `timestamp`
         UpdateExpression: "SET content = :content, imageUrl = :imageUrl, updatedAt = :updatedAt",
         ExpressionAttributeValues: {
           ":content": newContent || existingPost.Item.content,
