@@ -1,8 +1,13 @@
 const express = require("express");
+const cors = require("cors"); // <-- Agregar esto
+
 const app = express();
 const postRoutes = require("./routes/postRoutes");
 const swaggerUi = require("swagger-ui-express");
 const swaggerDocument = require("./swagger");
+
+// 🛠️ Permitir solicitudes desde cualquier origen
+app.use(cors({ origin: "*" }));
 
 app.use(express.json());
 app.use("/api", postRoutes);
